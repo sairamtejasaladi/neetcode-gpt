@@ -1,21 +1,37 @@
 import numpy as np
-from numpy.typing import NDArray
+from typing import Tuple, List
 
 
 class Solution:
-    def forward(self, x: NDArray[np.float64], gamma: NDArray[np.float64], beta: NDArray[np.float64]) -> NDArray[np.float64]:
-        # x: 1D feature vector
-        # gamma: 1D scale parameter (same length as x)
-        # beta: 1D shift parameter (same length as x)
-        # eps = 1e-5
-        # Normalize: x_hat = (x - mean) / sqrt(var + eps)
-        # Scale and shift: out = gamma * x_hat + beta
-        # return np.round(your_answer, 5)
-        mean = np.mean(x)
-        var_ = np.var(x)
-        eps = 1e-5
+    def batch_norm(self, x: List[List[float]], gamma: List[float], beta: List[float],
+                   running_mean: List[float], running_var: List[float],
+                   momentum: float, eps: float, training: bool) -> Tuple[List[List[float]], List[float], List[float]]:
+        # During training: normalize using batch statistics, then update running stats
+        # During inference: normalize using running stats (no batch stats needed)
+        # Apply affine transform: y = gamma * x_hat + beta
+        # Return (y, running_mean, running_var), all rounded to 4 decimals as lists
+        if training : 
+            x_ar = np.array(x)
+            x_mean = np.mean(x , axis = 0)  
+            x_var = np.var(x , axis =0)
+            x_hat = (x_ar - x_mean)/ np.sqrt(x_var + eps)
 
-        norm = (x-mean)/np.sqrt(var_+eps)
-        out = gamma * norm + beta
-        return np.round(out, 5)
-    
+            y = gamma * x_hat + beta
+
+            running_mean = (1-momentum)*np.array(running_mean) + momentum * x_mean 
+            running_var = (1-momentum)*np.array(running_var) + momentum * x_var
+        
+            return (list(np.round(y , 4)), list(np.round(running_mean , 4)), list(np.round(running_var, 4)))
+        else : 
+            x_ar = np.array(x)
+
+            x_hat = (x_ar - np.array(running_mean))/ np.sqrt(np.array(running_var) + eps)
+
+            y = gamma * x_hat + beta
+        
+            return (list(np.round(y , 4)), list(np.round(running_mean , 4)), list(np.round(running_var, 4)))
+
+
+
+
+
